@@ -4,7 +4,7 @@
 download and untar file newest version from [releases](https://github.com/nicksherron/mongo_parse/releases)
 
 ```
-$ wget https://github.com/nicksherron/mongo_parse/releases/download/v0.1.0/mongo_parse_v0.1.0_darwin_amd64.tar.gz \
+$ wget https://github.com/nicksherron/mongo_parse/releases/download/v0.1.0/mongo_parse_v0.1.0_darwin_amd64.tar.gz\
     && tar -xvf mongo_parse_v0.1.0_darwin_amd64.tar.gz
 ```
 ```

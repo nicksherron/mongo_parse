@@ -112,7 +112,7 @@ func main() {
 	srcC := client.Database(db).Collection(src)
 	dstC := client.Database(db).Collection(dst)
 
-	ctx, _ = context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, _ = context.WithTimeout(context.Background(), 2*time.Minute)
 	cur, err := srcC.Find(ctx, bson.M{})
 	if err != nil {
 		log.Fatal(err)
