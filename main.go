@@ -104,8 +104,7 @@ func main() {
 	dbInit()
 	log.Println("starting ")
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoServer))
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoServer))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,13 +112,11 @@ func main() {
 	srcC := client.Database(db).Collection(src)
 	dstC := client.Database(db).Collection(dst)
 
-	ctx, _ = context.WithTimeout(context.Background(), 2*time.Minute)
-	cur, err := srcC.Find(ctx, bson.M{})
+	cur, err := srcC.Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cur.Close(ctx)
-	for cur.Next(ctx) {
+	for cur.Next(context.TODO()) {
 		var result bson.M
 		err := cur.Decode(&result)
 		if err != nil {
@@ -220,7 +217,7 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			}
-			dstC.InsertOne(context.Background(), b)
+			dstC.InsertOne(context.TODO(), b)
 		}(v)
 		if counter > *workers {
 			wg.Wait()
