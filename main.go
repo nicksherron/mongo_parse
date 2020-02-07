@@ -198,7 +198,7 @@ func main() {
 	count, err := srcC.CountDocuments(context.TODO(), bson.M{})
 
 	if *progress {
-		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(60)
+		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(80)
 		bar.Set("message", "Inserting docs\t")
 	}
 
