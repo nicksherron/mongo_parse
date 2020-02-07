@@ -152,7 +152,75 @@ func main() {
 					bar.Add(1)
 				}
 			}()
-			dstC.InsertOne(context.Background(), doc)
+			// create new record since order not preserved
+			out := bson.D{
+				{"_id", doc["_id"]},
+				{"FName", doc["FName"]},
+				{"MName", doc["MName"]},
+				{"LName", doc["LName"]},
+				{"Suffix", doc["Suffix"]},
+				{"PracticeArea", doc["PracticeArea"]},
+				{"FirmName", doc["FirmName"]},
+				{"Address", doc["Address"]},
+				{"City", doc["City"]},
+				{"State", doc["State"]},
+				{"Zip", doc["Zip"]},
+				{"Email", doc["Email"]},
+				{"Website", doc["Website"]},
+				{"Phone", doc["Phone"]},
+				{"Mobile", doc["Mobile"]},
+				{"Fax", doc["Fax"]},
+				{"ContactLegacyID", doc["ContactLegacyID"]},
+				{"CompanyLegacyID", doc["CompanyLegacyID"]},
+				{"SFContactID", doc["SFContactID"]},
+				{"SFCompanyID", doc["SFCompanyID"]},
+				{"Status", doc["Status"]},
+				{"Bar", doc["Bar"]},
+				{"BarYear", doc["BarYear"]},
+				{"Rating", doc["Rating"]},
+				{"RatingFactors", doc["RatingFactors"]},
+				{"FirmRating", doc["FirmRating"]},
+				{"Languages", doc["Languages"]},
+				{"AdvancedDegrees", doc["AdvancedDegrees"]},
+				{"Sections", doc["Sections"]},
+				{"StateCourts", doc["StateCourts"]},
+				{"FederalCourts", doc["FederalCourts"]},
+				{"BoardCerts", doc["BoardCerts"]},
+				{"NationalCerts", doc["NationalCerts"]},
+				{"StateAdmitted", doc["StateAdmitted"]},
+				{"Companies", doc["Companies"]},
+				{"Undergrad", doc["Undergrad"]},
+				{"CircuitDistrict", doc["CircuitDistrict"]},
+				{"LawSchoolName", doc["LawSchoolName"]},
+				{"StateAdmission", doc["StateAdmission"]},
+				{"Associations", doc["Associations"]},
+				{"AwardName", doc["AwardName"]},
+				{"SourceName", doc["SourceName"]},
+				{"Updated", doc["Updated"]},
+				{"Avvo_Rating", doc["Avvo_Rating"]},
+				{"BIO", doc["BIO"]},
+				{"AttorneyID", doc["AttorneyID"]},
+				{"MartinAwardURL", doc["MartinAwardURL"]},
+				{"MartinPhotoURL", doc["MartinPhotoURL"]},
+				{"ClientRating", doc["ClientRating"]},
+				{"ReerRating", doc["ReerRating"]},
+				{"ISLN", doc["ISLN"]},
+				{"RegistryImageURL", doc["RegistryImageURL"]},
+				{"AdmitYear", doc["AdmitYear"]},
+				{"BarStatus", doc["BarStatus"]},
+				{"StateBarAdmissions", doc["StateBarAdmissions"]},
+				{"BarSource", doc["BarSource"]},
+				{"RegistryData", doc["RegistryData"]},
+				{"NonFirmCompany", doc["NonFirmCompany"]},
+				{"OriginalDataSource", doc["OriginalDataSource"]},
+				{"GroupID", doc["GroupID"]},
+				{"RecordID", doc["RecordID"]},
+			}
+			b, err := bson.Marshal(out)
+			if err != nil {
+				log.Println(err)
+			}
+			dstC.InsertOne(context.Background(), b)
 		}(v)
 		if counter > *workers {
 			wg.Wait()
