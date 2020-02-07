@@ -31,23 +31,20 @@ var (
 	wg            sync.WaitGroup
 	barTemplate   = `{{string . "message"}}{{counters . }} {{bar . }} {{percent . }} {{speed . "%s inserts/sec" }}`
 	bar           *pb.ProgressBar
-	Results       Docs
 )
 
-type Docs []bson.M
+type Doc bson.M
 
-func (d Docs) clean() []bson.M {
-	for i, data := range d {
-		for k := range data {
-			if k == "PracticeArea" || k == "FirmName" {
-				switch d[i][k].(type) {
-				case string:
-					var a []string
-					for _, v := range strings.Split(d[i][k].(string), ";") {
-						a = append(a, strings.TrimSpace(v))
-					}
-					d[i][k] = a
+func (d Doc) clean() Doc {
+	for k := range d {
+		if k == "PracticeArea" || k == "FirmName" {
+			switch d[k].(type) {
+			case string:
+				var a []string
+				for _, v := range strings.Split(d[k].(string), ";") {
+					a = append(a, strings.TrimSpace(v))
 				}
+				d[k] = a
 			}
 		}
 	}
@@ -98,6 +95,87 @@ func dbInit() {
 	}
 }
 
+func insert(doc Doc, client *mongo.Client) {
+
+	dstC := client.Database(db).Collection(dst)
+
+	defer func() {
+		wg.Done()
+		if *progress {
+			bar.Add(1)
+		}
+	}()
+	// create new record since order not preserved
+	out := bson.D{
+		{"_id", doc["_id"]},
+		{"FName", doc["FName"]},
+		{"MName", doc["MName"]},
+		{"LName", doc["LName"]},
+		{"Suffix", doc["Suffix"]},
+		{"PracticeArea", doc["PracticeArea"]},
+		{"FirmName", doc["FirmName"]},
+		{"Address", doc["Address"]},
+		{"City", doc["City"]},
+		{"State", doc["State"]},
+		{"Zip", doc["Zip"]},
+		{"Email", doc["Email"]},
+		{"Website", doc["Website"]},
+		{"Phone", doc["Phone"]},
+		{"Mobile", doc["Mobile"]},
+		{"Fax", doc["Fax"]},
+		{"ContactLegacyID", doc["ContactLegacyID"]},
+		{"CompanyLegacyID", doc["CompanyLegacyID"]},
+		{"SFContactID", doc["SFContactID"]},
+		{"SFCompanyID", doc["SFCompanyID"]},
+		{"Status", doc["Status"]},
+		{"Bar", doc["Bar"]},
+		{"BarYear", doc["BarYear"]},
+		{"Rating", doc["Rating"]},
+		{"RatingFactors", doc["RatingFactors"]},
+		{"FirmRating", doc["FirmRating"]},
+		{"Languages", doc["Languages"]},
+		{"AdvancedDegrees", doc["AdvancedDegrees"]},
+		{"Sections", doc["Sections"]},
+		{"StateCourts", doc["StateCourts"]},
+		{"FederalCourts", doc["FederalCourts"]},
+		{"BoardCerts", doc["BoardCerts"]},
+		{"NationalCerts", doc["NationalCerts"]},
+		{"StateAdmitted", doc["StateAdmitted"]},
+		{"Companies", doc["Companies"]},
+		{"Undergrad", doc["Undergrad"]},
+		{"CircuitDistrict", doc["CircuitDistrict"]},
+		{"LawSchoolName", doc["LawSchoolName"]},
+		{"StateAdmission", doc["StateAdmission"]},
+		{"Associations", doc["Associations"]},
+		{"AwardName", doc["AwardName"]},
+		{"SourceName", doc["SourceName"]},
+		{"Updated", doc["Updated"]},
+		{"Avvo_Rating", doc["Avvo_Rating"]},
+		{"BIO", doc["BIO"]},
+		{"AttorneyID", doc["AttorneyID"]},
+		{"MartinAwardURL", doc["MartinAwardURL"]},
+		{"MartinPhotoURL", doc["MartinPhotoURL"]},
+		{"ClientRating", doc["ClientRating"]},
+		{"ReerRating", doc["ReerRating"]},
+		{"ISLN", doc["ISLN"]},
+		{"RegistryImageURL", doc["RegistryImageURL"]},
+		{"AdmitYear", doc["AdmitYear"]},
+		{"BarStatus", doc["BarStatus"]},
+		{"StateBarAdmissions", doc["StateBarAdmissions"]},
+		{"BarSource", doc["BarSource"]},
+		{"RegistryData", doc["RegistryData"]},
+		{"NonFirmCompany", doc["NonFirmCompany"]},
+		{"OriginalDataSource", doc["OriginalDataSource"]},
+		{"GroupID", doc["GroupID"]},
+		{"RecordID", doc["RecordID"]},
+	}
+	b, err := bson.Marshal(out)
+	if err != nil {
+		log.Println(err)
+	}
+	dstC.InsertOne(context.TODO(), b)
+}
+
 func main() {
 	start := time.Now()
 	flag.Parse()
@@ -110,115 +188,28 @@ func main() {
 	}
 
 	srcC := client.Database(db).Collection(src)
-	dstC := client.Database(db).Collection(dst)
+
+	count, err := srcC.CountDocuments(context.TODO(), bson.M{})
+
+	if *progress {
+		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(80)
+		bar.Set("message", "Inserting docs\t")
+	}
 
 	cur, err := srcC.Find(context.TODO(), bson.M{})
 	if err != nil {
 		log.Fatal(err)
 	}
+	counter := 0
 	for cur.Next(context.TODO()) {
-		var result bson.M
+		var result Doc
 		err := cur.Decode(&result)
 		if err != nil {
 			log.Fatal(err)
 		}
-		Results = append(Results, result)
-	}
-	if err := cur.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	if len(Results) < *workers {
-		*workers = len(Results)
-	}
-
-	log.Printf("found %v records\n", len(Results))
-
-	if *progress {
-		bar = pb.ProgressBarTemplate(barTemplate).Start(len(Results)).SetMaxWidth(80)
-		bar.Set("message", "Inserting docs\t")
-	}
-	counter := 0
-	for _, v := range Results.clean() {
 		wg.Add(1)
 		counter++
-		go func(doc bson.M) {
-			defer func() {
-				wg.Done()
-				if *progress {
-					bar.Add(1)
-				}
-			}()
-			// create new record since order not preserved
-			out := bson.D{
-				{"_id", doc["_id"]},
-				{"FName", doc["FName"]},
-				{"MName", doc["MName"]},
-				{"LName", doc["LName"]},
-				{"Suffix", doc["Suffix"]},
-				{"PracticeArea", doc["PracticeArea"]},
-				{"FirmName", doc["FirmName"]},
-				{"Address", doc["Address"]},
-				{"City", doc["City"]},
-				{"State", doc["State"]},
-				{"Zip", doc["Zip"]},
-				{"Email", doc["Email"]},
-				{"Website", doc["Website"]},
-				{"Phone", doc["Phone"]},
-				{"Mobile", doc["Mobile"]},
-				{"Fax", doc["Fax"]},
-				{"ContactLegacyID", doc["ContactLegacyID"]},
-				{"CompanyLegacyID", doc["CompanyLegacyID"]},
-				{"SFContactID", doc["SFContactID"]},
-				{"SFCompanyID", doc["SFCompanyID"]},
-				{"Status", doc["Status"]},
-				{"Bar", doc["Bar"]},
-				{"BarYear", doc["BarYear"]},
-				{"Rating", doc["Rating"]},
-				{"RatingFactors", doc["RatingFactors"]},
-				{"FirmRating", doc["FirmRating"]},
-				{"Languages", doc["Languages"]},
-				{"AdvancedDegrees", doc["AdvancedDegrees"]},
-				{"Sections", doc["Sections"]},
-				{"StateCourts", doc["StateCourts"]},
-				{"FederalCourts", doc["FederalCourts"]},
-				{"BoardCerts", doc["BoardCerts"]},
-				{"NationalCerts", doc["NationalCerts"]},
-				{"StateAdmitted", doc["StateAdmitted"]},
-				{"Companies", doc["Companies"]},
-				{"Undergrad", doc["Undergrad"]},
-				{"CircuitDistrict", doc["CircuitDistrict"]},
-				{"LawSchoolName", doc["LawSchoolName"]},
-				{"StateAdmission", doc["StateAdmission"]},
-				{"Associations", doc["Associations"]},
-				{"AwardName", doc["AwardName"]},
-				{"SourceName", doc["SourceName"]},
-				{"Updated", doc["Updated"]},
-				{"Avvo_Rating", doc["Avvo_Rating"]},
-				{"BIO", doc["BIO"]},
-				{"AttorneyID", doc["AttorneyID"]},
-				{"MartinAwardURL", doc["MartinAwardURL"]},
-				{"MartinPhotoURL", doc["MartinPhotoURL"]},
-				{"ClientRating", doc["ClientRating"]},
-				{"ReerRating", doc["ReerRating"]},
-				{"ISLN", doc["ISLN"]},
-				{"RegistryImageURL", doc["RegistryImageURL"]},
-				{"AdmitYear", doc["AdmitYear"]},
-				{"BarStatus", doc["BarStatus"]},
-				{"StateBarAdmissions", doc["StateBarAdmissions"]},
-				{"BarSource", doc["BarSource"]},
-				{"RegistryData", doc["RegistryData"]},
-				{"NonFirmCompany", doc["NonFirmCompany"]},
-				{"OriginalDataSource", doc["OriginalDataSource"]},
-				{"GroupID", doc["GroupID"]},
-				{"RecordID", doc["RecordID"]},
-			}
-			b, err := bson.Marshal(out)
-			if err != nil {
-				log.Println(err)
-			}
-			dstC.InsertOne(context.TODO(), b)
-		}(v)
+		go insert(result.clean(), client)
 		if counter > *workers {
 			wg.Wait()
 			counter = 0
