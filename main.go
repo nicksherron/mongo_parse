@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/cheggaaa/pb/v3"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gopkg.in/mgo.v2/bson"
 )
 
 var (
@@ -175,11 +175,7 @@ func insert(doc Doc, client *mongo.Client) {
 		{"GroupID", doc["GroupID"]},
 		{"RecordID", doc["RecordID"]},
 	}
-	b, err := bson.Marshal(out)
-	if err != nil {
-		log.Println(err)
-	}
-	dstC.InsertOne(context.TODO(), b)
+	dstC.InsertOne(context.TODO(), out)
 }
 
 func main() {
@@ -198,7 +194,7 @@ func main() {
 	count, err := srcC.CountDocuments(context.TODO(), bson.M{})
 
 	if *progress {
-		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(80)
+		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(70)
 		bar.Set("message", "Inserting docs\t")
 	}
 
