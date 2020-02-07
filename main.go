@@ -99,6 +99,7 @@ func dbInit() {
 }
 
 func main() {
+	start := time.Now()
 	flag.Parse()
 	dbInit()
 	log.Println("starting ")
@@ -161,6 +162,5 @@ func main() {
 	wg.Wait()
 	bar.Finish()
 
-	log.Printf("inserted %v changed records", bar.Total())
-
+	log.Printf("inserted %v records in %v", bar.Total(), time.Since(start))
 }
