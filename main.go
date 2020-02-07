@@ -39,8 +39,7 @@ type Docs []bson.M
 func (d Docs) clean() []bson.M {
 	for i, data := range d {
 		for k := range data {
-			switch {
-			case k == "PracticeArea", k == "FirmName":
+			if k == "PracticeArea" || k == "FirmName" {
 				switch d[i][k].(type) {
 				case string:
 					var a []string
