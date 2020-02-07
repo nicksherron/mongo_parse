@@ -36,18 +36,24 @@ var (
 type Doc bson.M
 
 func (d Doc) clean() Doc {
-	for k := range d {
-		if k == "PracticeArea" || k == "FirmName" {
-			switch d[k].(type) {
-			case string:
-				var a []string
-				for _, v := range strings.Split(d[k].(string), ";") {
-					a = append(a, strings.TrimSpace(v))
-				}
-				d[k] = a
-			}
+
+	switch d["PracticeArea"].(type) {
+	case string:
+		var a []string
+		for _, v := range strings.Split(d["PracticeArea"].(string), ";") {
+			a = append(a, strings.TrimSpace(v))
 		}
+		d["PracticeArea"] = a
 	}
+	switch d["FirmName"].(type) {
+	case string:
+		var a []string
+		for _, v := range strings.Split(d["FirmName"].(string), ";") {
+			a = append(a, strings.TrimSpace(v))
+		}
+		d["FirmName"] = a
+	}
+
 	return d
 }
 
