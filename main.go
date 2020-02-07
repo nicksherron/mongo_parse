@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/cheggaaa/pb/v3"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gopkg.in/mgo.v2/bson"
 )
 
 var (
@@ -34,28 +34,6 @@ var (
 )
 
 type Doc bson.M
-
-func (d Doc) clean() Doc {
-
-	switch d["PracticeArea"].(type) {
-	case string:
-		var a []string
-		for _, v := range strings.Split(d["PracticeArea"].(string), ";") {
-			a = append(a, strings.TrimSpace(v))
-		}
-		d["PracticeArea"] = a
-	}
-	switch d["FirmName"].(type) {
-	case string:
-		var a []string
-		for _, v := range strings.Split(d["FirmName"].(string), ";") {
-			a = append(a, strings.TrimSpace(v))
-		}
-		d["FirmName"] = a
-	}
-
-	return d
-}
 
 func dbInit() {
 
@@ -111,6 +89,16 @@ func insert(doc Doc, client *mongo.Client) {
 			bar.Add(1)
 		}
 	}()
+
+	switch doc["PracticeArea"].(type) {
+	case string:
+		var a []string
+		for _, v := range strings.Split(doc["PracticeArea"].(string), ";") {
+			a = append(a, strings.TrimSpace(v))
+		}
+		doc["PracticeArea"] = a
+	}
+
 	// create new record since order not preserved
 	out := bson.D{
 		{"_id", doc["_id"]},
@@ -119,16 +107,21 @@ func insert(doc Doc, client *mongo.Client) {
 		{"LName", doc["LName"]},
 		{"Suffix", doc["Suffix"]},
 		{"PracticeArea", doc["PracticeArea"]},
-		{"FirmName", doc["FirmName"]},
-		{"Address", doc["Address"]},
-		{"City", doc["City"]},
-		{"State", doc["State"]},
-		{"Zip", doc["Zip"]},
+		{"Firms", bson.A{
+			bson.D{
+				{"FirmName", doc["FirmName"]},
+				{"Address", doc["Address"]},
+				{"City", doc["City"]},
+				{"State", doc["State"]},
+				{"Zip", doc["Zip"]},
+			},
+		}},
 		{"Email", doc["Email"]},
 		{"Website", doc["Website"]},
 		{"Phone", doc["Phone"]},
 		{"Mobile", doc["Mobile"]},
 		{"Fax", doc["Fax"]},
+
 		{"ContactLegacyID", doc["ContactLegacyID"]},
 		{"CompanyLegacyID", doc["CompanyLegacyID"]},
 		{"SFContactID", doc["SFContactID"]},
@@ -175,17 +168,13 @@ func insert(doc Doc, client *mongo.Client) {
 		{"GroupID", doc["GroupID"]},
 		{"RecordID", doc["RecordID"]},
 	}
-	b, err := bson.Marshal(out)
-	if err != nil {
-		log.Println(err)
-	}
-	dstC.InsertOne(context.TODO(), b)
+	dstC.InsertOne(context.TODO(), out)
 }
-
 func main() {
-	start := time.Now()
 	flag.Parse()
 	dbInit()
+
+	start := time.Now()
 	log.Println("starting ")
 
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoServer))
@@ -198,7 +187,7 @@ func main() {
 	count, err := srcC.CountDocuments(context.TODO(), bson.M{})
 
 	if *progress {
-		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(80)
+		bar = pb.ProgressBarTemplate(barTemplate).Start(int(count)).SetMaxWidth(70)
 		bar.Set("message", "Inserting docs\t")
 	}
 
@@ -215,7 +204,7 @@ func main() {
 		}
 		wg.Add(1)
 		counter++
-		go insert(result.clean(), client)
+		go insert(result, client)
 		if counter > *workers {
 			wg.Wait()
 			counter = 0
